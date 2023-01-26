@@ -69,4 +69,5 @@ const Item = (props) => (
   <span>{props.item.points}</span>
 </li>
 );
+
 export default App;
