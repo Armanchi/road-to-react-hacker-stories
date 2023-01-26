@@ -46,7 +46,7 @@ const Search = (props) => (
         id="search"
         type="text"
         value={props.search}
-        pnChange={props.onSearch}
+        onChange={props.onSearch}
         />
   </div>
 );
