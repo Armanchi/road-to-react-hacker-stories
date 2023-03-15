@@ -1,14 +1,20 @@
 import * as React from 'react';
+import axios from 'axios';
+
 const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
+
 const useSemiPersistentState = (key, initialState) => {
   const [value, setValue] = React.useState(
     localStorage.getItem(key) || initialState
   );
+
   React.useEffect(() => {
     localStorage.setItem(key, value);
   }, [value, key]);
+
   return [value, setValue];
 };
+
 const storiesReducer = (state, action) => {
   switch (action.type) {
     case 'STORIES_FETCH_INIT':
@@ -41,6 +47,7 @@ const storiesReducer = (state, action) => {
       throw new Error();
   }
 };
+
 const App = () => {
   const [searchTerm, setSearchTerm] = useSemiPersistentState(
     'search',
@@ -56,60 +63,56 @@ const App = () => {
     { data: [], isLoading: false, isError: false }
   );
 
-  const handleFetchStories = React.useCallback(() => {
+  const handleFetchStories = React.useCallback(async () => {
     dispatchStories({ type: 'STORIES_FETCH_INIT' });
-    fetch(url)
-      .then((response) => response.json())
-      .then((result) => {
-        dispatchStories({
-          type: 'STORIES_FETCH_SUCCESS',
-          payload: result.hits,
-        });
-      })
-      .catch(() =>
-        dispatchStories({ type: 'STORIES_FETCH_FAILURE' })
-      );
-    }, [url]);
-    React.useEffect(() => {
-      handleFetchStories();
-    }, [handleFetchStories]);
-    const handleRemoveStory = (item) => {
-      dispatchStories({
-        type: 'REMOVE_STORY',
-        payload: item,
-      });
-    };
-    const handleSearchInput = (event) => {
-      setSearchTerm(event.target.value);
-    };
-  
-    const handleSearchSubmit = () => {
-      setUrl(`${API_ENDPOINT}${searchTerm}`);
-    };
-  
-    return (
-      <div>
-        <h1>My Hacker Stories</h1>
-        <InputWithLabel
-          id="search"
-          value={searchTerm}
-          isFocused
-          onInputChange={handleSearchInput}
-      >
-        <strong>Search:</strong>
-      </InputWithLabel>
 
-      <button
-        type="button"
-        disabled={!searchTerm}
-        onClick={handleSearchSubmit}
-      >
-        Submit
-      </button>
+    try {
+      const result = await axios.get(url);
+
+      dispatchStories({
+        type: 'STORIES_FETCH_SUCCESS',
+        payload: result.data.hits,
+      });
+    } catch {
+      dispatchStories({ type: 'STORIES_FETCH_FAILURE' });
+    }
+  }, [url]);
+
+  React.useEffect(() => {
+    handleFetchStories();
+  }, [handleFetchStories]);
+
+  const handleRemoveStory = (item) => {
+    dispatchStories({
+      type: 'REMOVE_STORY',
+      payload: item,
+    });
+  };
+
+  const handleSearchInput = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const handleSearchSubmit = (event) => {
+    setUrl(`${API_ENDPOINT}${searchTerm}`);
+
+    event.preventDefault();
+  };
+
+  return (
+    <div>
+      <h1>My Hacker Stories</h1>
+
+      <SearchForm
+        searchTerm={searchTerm}
+        onSearchInput={handleSearchInput}
+        onSearchSubmit={handleSearchSubmit}
+      />
 
       <hr />
 
       {stories.isError && <p>Something went wrong ...</p>}
+
       {stories.isLoading ? (
         <p>Loading ...</p>
       ) : (
@@ -118,6 +121,28 @@ const App = () => {
     </div>
   );
 };
+
+const SearchForm = ({
+  searchTerm,
+  onSearchInput,
+  onSearchSubmit,
+}) => (
+  <form onSubmit={onSearchSubmit}>
+    <InputWithLabel
+      id="search"
+      value={searchTerm}
+      isFocused
+      onInputChange={onSearchInput}
+    >
+      <strong>Search:</strong>
+    </InputWithLabel>
+
+    <button type="submit" disabled={!searchTerm}>
+      Submit
+    </button>
+  </form>
+);
+
 const InputWithLabel = ({
   id,
   value,
@@ -127,11 +152,13 @@ const InputWithLabel = ({
   children,
 }) => {
   const inputRef = React.useRef();
+
   React.useEffect(() => {
     if (isFocused && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isFocused]);
+
   return (
     <>
       <label htmlFor={id}>{children}</label>
@@ -146,6 +173,7 @@ const InputWithLabel = ({
     </>
   );
 };
+
 const List = ({ list, onRemoveItem }) => (
   <ul>
     {list.map((item) => (
@@ -157,6 +185,7 @@ const List = ({ list, onRemoveItem }) => (
     ))}
   </ul>
 );
+
 const Item = ({ item, onRemoveItem }) => (
   <li>
     <span>
@@ -172,4 +201,5 @@ const Item = ({ item, onRemoveItem }) => (
     </span>
   </li>
 );
+
 export default App;
