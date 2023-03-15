@@ -46,42 +46,69 @@ const App = () => {
     'search',
     'React'
   );
+
+  const [url, setUrl] = React.useState(
+    `${API_ENDPOINT}${searchTerm}`
+  );
+
   const [stories, dispatchStories] = React.useReducer(
     storiesReducer,
     { data: [], isLoading: false, isError: false }
   );
+
   const handleFetchStories = React.useCallback(() => {
-    if (!searchTerm) return;
-
     dispatchStories({ type: 'STORIES_FETCH_INIT' });
-    );
-  }, [searchTerm]);
-
-  React.useEffect(() => {
-    handleFetchStories();
-  }, [handleFetchStories]);
-
-  const handleRemoveStory = (item) => {
-    dispatchStories({
-      type: 'REMOVE_STORY',
-      payload: item,
-    });
-  };
-  const handleSearch = (event) => {
-    setSearchTerm(event.target.value);
-  };
-  return (
-    <div>
-      <h1>My Hacker Stories</h1>
-      <InputWithLabel
-        id="search"
-        value={searchTerm}
-        isFocused
-        onInputChange={handleSearch}
+    fetch(url)
+      .then((response) => response.json())
+      .then((result) => {
+        dispatchStories({
+          type: 'STORIES_FETCH_SUCCESS',
+          payload: result.hits,
+        });
+      })
+      .catch(() =>
+        dispatchStories({ type: 'STORIES_FETCH_FAILURE' })
+      );
+    }, [url]);
+    React.useEffect(() => {
+      handleFetchStories();
+    }, [handleFetchStories]);
+    const handleRemoveStory = (item) => {
+      dispatchStories({
+        type: 'REMOVE_STORY',
+        payload: item,
+      });
+    };
+    const handleSearchInput = (event) => {
+      setSearchTerm(event.target.value);
+    };
+  
+    const handleSearchSubmit = () => {
+      setUrl(`${API_ENDPOINT}${searchTerm}`);
+    };
+  
+    return (
+      <div>
+        <h1>My Hacker Stories</h1>
+        <InputWithLabel
+          id="search"
+          value={searchTerm}
+          isFocused
+          onInputChange={handleSearchInput}
       >
         <strong>Search:</strong>
       </InputWithLabel>
+
+      <button
+        type="button"
+        disabled={!searchTerm}
+        onClick={handleSearchSubmit}
+      >
+        Submit
+      </button>
+
       <hr />
+
       {stories.isError && <p>Something went wrong ...</p>}
       {stories.isLoading ? (
         <p>Loading ...</p>
@@ -115,25 +142,25 @@ const InputWithLabel = ({
         type={type}
         value={value}
         onChange={onInputChange}
-        />
-        </>
-      );
-    };
-    const List = ({ list, onRemoveItem }) => (
-      <ul>
-        {list.map((item) => (
-          <Item
-            key={item.objectID}
-            item={item}
-            onRemoveItem={onRemoveItem}
-          />
-        ))}
-      </ul>
-    );
-    const Item = ({ item, onRemoveItem }) => (
-      <li>
-        <span>
-        <a href={item.url}>{item.title}</a>
+      />
+    </>
+  );
+};
+const List = ({ list, onRemoveItem }) => (
+  <ul>
+    {list.map((item) => (
+      <Item
+        key={item.objectID}
+        item={item}
+        onRemoveItem={onRemoveItem}
+      />
+    ))}
+  </ul>
+);
+const Item = ({ item, onRemoveItem }) => (
+  <li>
+    <span>
+      <a href={item.url}>{item.title}</a>
     </span>
     <span>{item.author}</span>
     <span>{item.num_comments}</span>
